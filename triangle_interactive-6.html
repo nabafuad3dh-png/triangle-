@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مثلث تفاعلي</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f4f6fb;color:#172033}
+  main{max-width:900px;margin:24px auto;padding:18px}
+  .panel{background:white;border-radius:18px;padding:18px;box-shadow:0 8px 28px #18264a14}
+  h1{font-size:24px;margin:0 0 8px}
+  p{line-height:1.7;color:#526078;margin:6px 0 14px}
+  .stage{width:100%;background:linear-gradient(145deg,#fbfcff,#edf2ff);border:1px solid #e1e7f2;border-radius:14px;touch-action:none}
+  svg{display:block;width:100%;height:auto;aspect-ratio:760/500;touch-action:none}
+  .tri{fill:#83b8ff55;stroke:#2463d4;stroke-width:4;stroke-linejoin:round}
+  .handle{fill:#fff;stroke:#174ea6;stroke-width:3;cursor:grab}
+  .handle:active{cursor:grabbing}
+  .vertex{font-size:18px;font-weight:bold;fill:#153b79;pointer-events:none}
+  .angle{font-size:16px;fill:#27364f;font-weight:bold;pointer-events:none}
+  .side{font-size:15px;fill:#174ea6;font-weight:bold;paint-order:stroke;stroke:#f8faff;stroke-width:5px;stroke-linejoin:round;pointer-events:none}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+  button{border:0;border-radius:10px;padding:10px 16px;background:#245fc7;color:white;font-size:15px;cursor:pointer}
+  button.secondary{background:#e9eef8;color:#243653}
+  .readout{margin-top:12px;padding:12px;background:#f5f7fc;border-radius:10px;font-size:15px;line-height:1.9}
+  .hint{font-size:13px;color:#65738b}
+</style>
+</head>
+<body>
+<main>
+ <section class="panel">
+  <h1>المثلث التفاعلي</h1>
+  <p>اسحب الدوائر الزرقاء لتحريك رؤوس المثلث وتغيير شكله. ستتحدّث قياسات الزوايا والأضلاع تلقائيًا.</p>
+  <div class="stage">
+   <svg id="board" viewBox="0 0 760 500" role="img" aria-label="مثلث تفاعلي يمكن تحريك رؤوسه">
+    <polygon id="triangle" class="tri" points="180,390 580,390 380,85"/>
+    <text id="sideAB" class="side"></text><text id="sideBC" class="side"></text><text id="sideCA" class="side"></text>
+    <text id="angleA" class="angle"></text><text id="angleB" class="angle"></text><text id="angleC" class="angle"></text>
+    <circle id="A" class="handle" cx="180" cy="390" r="11"/><circle id="B" class="handle" cx="580" cy="390" r="11"/><circle id="C" class="handle" cx="380" cy="85" r="11"/>
+    <text id="labelA" class="vertex" x="158" y="420">A</text>
+    <text id="labelB" class="vertex" x="594" y="420">B</text>
+    <text id="labelC" class="vertex" x="380" y="58" text-anchor="middle">C</text>
+   </svg>
+  </div>
+  <div class="controls">
+   <button id="reset">إعادة الشكل الأصلي</button>
+   <button id="equal" class="secondary">مثلث متساوي الأضلاع</button>
+   <button id="right" class="secondary">مثلث قائم</button>
+  </div>
+  <div class="readout" id="readout" aria-live="polite"></div>
+  <p class="hint">ملاحظة: الأرقام تقريبية لأقرب درجة، والأطوال بوحدات الرسم.</p>
+ </section>
+</main>
+<script>
+const svg=document.getElementById('board');
+const pts={A:{x:180,y:390},B:{x:580,y:390},C:{x:380,y:85}};
+const original={A:{x:180,y:390},B:{x:580,y:390},C:{x:380,y:85}};
+let dragging=null;
+const $=id=>document.getElementById(id);
+function dist(p,q){return Math.hypot(p.x-q.x,p.y-q.y)}
+function angle(p,q,r){
+ const u={x:p.x-q.x,y:p.y-q.y},v={x:r.x-q.x,y:r.y-q.y};
+ const cos=Math.max(-1,Math.min(1,(u.x*v.x+u.y*v.y)/(Math.hypot(u.x,u.y)*Math.hypot(v.x,v.y))));
+ return Math.acos(cos)*180/Math.PI;
+}
+function midpoint(p,q){return{x:(p.x+q.x)/2,y:(p.y+q.y)/2}}
+function put(id,x,y,text){const el=$(id);el.setAttribute('x',x);el.setAttribute('y',y);el.textContent=text}
+function update(){
+ $('triangle').setAttribute('points',['A','B','C'].map(k=>`${pts[k].x},${pts[k].y}`).join(' '));
+ for(const k of ['A','B','C']){
+  $(k).setAttribute('cx',pts[k].x);$(k).setAttribute('cy',pts[k].y);
+ }
+ put('labelA',pts.A.x-24,pts.A.y+29,'A');
+ put('labelB',pts.B.x+14,pts.B.y+29,'B');
+ put('labelC',pts.C.x,pts.C.y-22,'C');
+ const ab=dist(pts.A,pts.B),bc=dist(pts.B,pts.C),ca=dist(pts.C,pts.A);
+ const aa=angle(pts.B,pts.A,pts.C),bb=angle(pts.A,pts.B,pts.C),cc=angle(pts.A,pts.C,pts.B);
+ let m=midpoint(pts.A,pts.B);put('sideAB',m.x,m.y+23,`AB = ${ab.toFixed(0)}`);
+ m=midpoint(pts.B,pts.C);put('sideBC',m.x+15,m.y,`BC = ${bc.toFixed(0)}`);
+ m=midpoint(pts.C,pts.A);put('sideCA',m.x-58,m.y,`CA = ${ca.toFixed(0)}`);
+ put('angleA',pts.A.x+23,pts.A.y-13,`${aa.toFixed(0)}°`);
+ put('angleB',pts.B.x-55,pts.B.y-13,`${bb.toFixed(0)}°`);
+ put('angleC',pts.C.x+15,pts.C.y+28,`${cc.toFixed(0)}°`);
+ $('readout').innerHTML=`<b>قياسات الزوايا:</b> A = ${aa.toFixed(1)}° ، B = ${bb.toFixed(1)}° ، C = ${cc.toFixed(1)}°<br><b>مجموع الزوايا:</b> ${(aa+bb+cc).toFixed(1)}°`;
+}
+function pointFromEvent(e){
+ const r=svg.getBoundingClientRect(),p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;
+ const q=p.matrixTransform(svg.getScreenCTM().inverse());
+ return{x:Math.max(25,Math.min(735,q.x)),y:Math.max(25,Math.min(475,q.y))};
+}
+['A','B','C'].forEach(k=>{
+ $(k).addEventListener('pointerdown',e=>{dragging=k;$(k).setPointerCapture(e.pointerId);e.preventDefault()});
+ $(k).addEventListener('pointermove',e=>{if(dragging!==k)return;Object.assign(pts[k],pointFromEvent(e));update()});
+ $(k).addEventListener('pointerup',()=>dragging=null);
+ $(k).addEventListener('pointercancel',()=>dragging=null);
+});
+function setShape(shape){for(const k of ['A','B','C'])Object.assign(pts[k],shape[k]);update()}
+$('reset').onclick=()=>setShape(original);
+$('equal').onclick=()=>setShape({A:{x:180,y:390},B:{x:580,y:390},C:{x:380,y:43.6}});
+$('right').onclick=()=>setShape({A:{x:180,y:390},B:{x:580,y:390},C:{x:180,y:90}});
+update();
+</script>
+</body>
+</html>
